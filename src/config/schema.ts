@@ -61,6 +61,7 @@ const GROUP_LABELS: Record<string, string> = {
   commands: "Commands",
   session: "Session",
   cron: "Cron",
+  endpoints: "Endpoints",
   hooks: "Hooks",
   ui: "UI",
   browser: "Browser",
@@ -88,6 +89,7 @@ const GROUP_ORDER: Record<string, number> = {
   commands: 85,
   session: 90,
   cron: 100,
+  endpoints: 105,
   hooks: 110,
   ui: 120,
   browser: 130,
@@ -344,6 +346,10 @@ const FIELD_LABELS: Record<string, string> = {
   "channels.mattermost.requireMention": "Mattermost Require Mention",
   "channels.signal.account": "Signal Account",
   "channels.imessage.cliPath": "iMessage CLI Path",
+  "endpoints.enabled": "Endpoints Enabled",
+  "endpoints.token": "Endpoints Auth Token",
+  "endpoints.basePath": "Endpoints Base Path",
+  "endpoints.entries": "Endpoint Entries",
   "agents.list[].identity.avatar": "Agent Avatar",
   "discovery.mdns.mode": "mDNS Discovery Mode",
   "plugins.enabled": "Enable Plugins",
@@ -478,6 +484,12 @@ const FIELD_HELP: Record<string, string> = {
   "channels.mattermost.oncharPrefixes": 'Trigger prefixes for onchar mode (default: [">", "!"]).',
   "channels.mattermost.requireMention":
     "Require @mention in channels before responding (default: true).",
+  "endpoints.enabled": "Enable named HTTP endpoints for agent request/response.",
+  "endpoints.token":
+    "Bearer token for endpoint auth. If omitted, endpoints accept unauthenticated requests.",
+  "endpoints.basePath": 'URL prefix for endpoints (default: "/endpoints").',
+  "endpoints.entries":
+    "List of endpoint entries. Each defines an id (path), instructions, mode (sync/async), and optional model/thinking overrides.",
   "auth.profiles": "Named auth profiles (provider + mode + optional email).",
   "auth.order": "Ordered auth profile IDs per provider (used for automatic failover).",
   "auth.cooldowns.billingBackoffHours":

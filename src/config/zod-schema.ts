@@ -4,6 +4,7 @@ import { ApprovalsSchema } from "./zod-schema.approvals.js";
 import { AgentsSchema, AudioSchema, BindingsSchema, BroadcastSchema } from "./zod-schema.agents.js";
 import { HexColorSchema, ModelsConfigSchema } from "./zod-schema.core.js";
 import { HookMappingSchema, HooksGmailSchema, InternalHooksSchema } from "./zod-schema.hooks.js";
+import { EndpointsSchema } from "./zod-schema.endpoints.js";
 import { ChannelsSchema } from "./zod-schema.providers.js";
 import { CommandsSchema, MessagesSchema, SessionSchema } from "./zod-schema.session.js";
 
@@ -245,6 +246,7 @@ export const OpenClawSchema = z
       })
       .strict()
       .optional(),
+    endpoints: EndpointsSchema,
     web: z
       .object({
         enabled: z.boolean().optional(),

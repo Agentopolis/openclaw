@@ -97,6 +97,8 @@ export async function runCronIsolatedAgentTurn(params: {
   sessionKey: string;
   agentId?: string;
   lane?: string;
+  /** Extra system prompt injected into the embedded agent run. */
+  instructions?: string;
 }): Promise<RunCronAgentTurnResult> {
   const defaultAgentId = resolveDefaultAgentId(params.cfg);
   const requestedAgentId =
@@ -288,6 +290,14 @@ export async function runCronIsolatedAgentTurn(params: {
     commandBody = `${base}\n${timeLine}`.trim();
   }
 
+  // Resolve instructions from params or job payload.
+  const resolvedInstructions =
+    params.instructions?.trim() ||
+    (params.job.payload.kind === "agentTurn"
+      ? params.job.payload.instructions?.trim()
+      : undefined) ||
+    undefined;
+
   const existingSnapshot = cronSession.sessionEntry.skillsSnapshot;
   const skillsSnapshotVersion = getSkillsSnapshotVersion(workspaceDir);
   const needsSkillsSnapshot =
@@ -373,6 +383,7 @@ export async function runCronIsolatedAgentTurn(params: {
           verboseLevel: resolvedVerboseLevel,
           timeoutMs,
           runId: cronSession.sessionEntry.sessionId,
+          extraSystemPrompt: resolvedInstructions,
         });
       },
     });

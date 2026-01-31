@@ -57,6 +57,10 @@ function sendJson(res: ServerResponse, status: number, body: unknown) {
 }
 
 export type HooksRequestHandler = (req: IncomingMessage, res: ServerResponse) => Promise<boolean>;
+export type EndpointsRequestHandler = (
+  req: IncomingMessage,
+  res: ServerResponse,
+) => Promise<boolean>;
 
 export function createHooksRequestHandler(
   opts: {
@@ -210,6 +214,7 @@ export function createGatewayHttpServer(opts: {
   openResponsesEnabled: boolean;
   openResponsesConfig?: import("../config/types.gateway.js").GatewayHttpResponsesConfig;
   handleHooksRequest: HooksRequestHandler;
+  handleEndpointsRequest?: EndpointsRequestHandler;
   handlePluginRequest?: HooksRequestHandler;
   resolvedAuth: import("./auth.js").ResolvedGatewayAuth;
   tlsOptions?: TlsOptions;
@@ -222,6 +227,7 @@ export function createGatewayHttpServer(opts: {
     openResponsesEnabled,
     openResponsesConfig,
     handleHooksRequest,
+    handleEndpointsRequest,
     handlePluginRequest,
     resolvedAuth,
   } = opts;
@@ -243,6 +249,9 @@ export function createGatewayHttpServer(opts: {
       const configSnapshot = loadConfig();
       const trustedProxies = configSnapshot.gateway?.trustedProxies ?? [];
       if (await handleHooksRequest(req, res)) {
+        return;
+      }
+      if (handleEndpointsRequest && (await handleEndpointsRequest(req, res))) {
         return;
       }
       if (

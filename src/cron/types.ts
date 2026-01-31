@@ -19,6 +19,8 @@ export type CronPayload =
       model?: string;
       thinking?: string;
       timeoutSeconds?: number;
+      /** Optional extra system prompt injected into the agent run. */
+      instructions?: string;
       allowUnsafeExternalContent?: boolean;
       deliver?: boolean;
       channel?: CronMessageChannel;
@@ -34,6 +36,7 @@ export type CronPayloadPatch =
       model?: string;
       thinking?: string;
       timeoutSeconds?: number;
+      instructions?: string;
       allowUnsafeExternalContent?: boolean;
       deliver?: boolean;
       channel?: CronMessageChannel;

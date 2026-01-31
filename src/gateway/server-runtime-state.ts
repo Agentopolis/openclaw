@@ -8,6 +8,10 @@ import type { RuntimeEnv } from "../runtime.js";
 import type { ResolvedGatewayAuth } from "./auth.js";
 import type { ChatAbortControllerEntry } from "./chat-abort.js";
 import type { HooksConfigResolved } from "./hooks.js";
+import {
+  createEndpointsConfigGetter,
+  createGatewayEndpointsRequestHandler,
+} from "./server/endpoints.js";
 import { createGatewayHooksRequestHandler } from "./server/hooks.js";
 import { listenGatewayHttpServer } from "./server/http-listen.js";
 import { resolveGatewayListenHosts } from "./net.js";
@@ -41,6 +45,7 @@ export async function createGatewayRuntimeState(params: {
   logCanvas: { info: (msg: string) => void; warn: (msg: string) => void };
   log: { info: (msg: string) => void; warn: (msg: string) => void };
   logHooks: ReturnType<typeof createSubsystemLogger>;
+  logEndpoints: ReturnType<typeof createSubsystemLogger>;
   logPlugins: ReturnType<typeof createSubsystemLogger>;
 }): Promise<{
   canvasHost: CanvasHostHandler | null;
@@ -99,6 +104,14 @@ export async function createGatewayRuntimeState(params: {
     logHooks: params.logHooks,
   });
 
+  const handleEndpointsRequest = createGatewayEndpointsRequestHandler({
+    deps: params.deps,
+    getEndpointsConfig: createEndpointsConfigGetter(),
+    bindHost: params.bindHost,
+    port: params.port,
+    log: params.logEndpoints,
+  });
+
   const handlePluginRequest = createGatewayPluginRequestHandler({
     registry: params.pluginRegistry,
     log: params.logPlugins,
@@ -116,6 +129,7 @@ export async function createGatewayRuntimeState(params: {
       openResponsesEnabled: params.openResponsesEnabled,
       openResponsesConfig: params.openResponsesConfig,
       handleHooksRequest,
+      handleEndpointsRequest,
       handlePluginRequest,
       resolvedAuth: params.resolvedAuth,
       tlsOptions: params.gatewayTls?.enabled ? params.gatewayTls.tlsOptions : undefined,

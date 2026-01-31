@@ -85,6 +85,7 @@ const logHealth = log.child("health");
 const logCron = log.child("cron");
 const logReload = log.child("reload");
 const logHooks = log.child("hooks");
+const logEndpoints = log.child("endpoints");
 const logPlugins = log.child("plugins");
 const logWsControl = log.child("ws");
 const canvasRuntime = runtimeForLogger(logCanvas);
@@ -305,6 +306,7 @@ export async function startGatewayServer(
     logCanvas,
     log,
     logHooks,
+    logEndpoints,
     logPlugins,
   });
   let bonjourStop: (() => Promise<void>) | null = null;
