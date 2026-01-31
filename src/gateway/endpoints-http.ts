@@ -93,6 +93,22 @@ export function createEndpointsRequestHandler(opts: {
     const callbackUrl = typeof raw.callbackUrl === "string" ? raw.callbackUrl.trim() : undefined;
     const mode = entry.mode ?? "sync";
 
+    if (mode === "async" && !callbackUrl) {
+      sendJson(res, 400, {
+        ok: false,
+        error: `Endpoint "${entry.id}" is async — callbackUrl is required`,
+      });
+      return true;
+    }
+
+    if (mode === "sync" && callbackUrl) {
+      sendJson(res, 400, {
+        ok: false,
+        error: `Endpoint "${entry.id}" is sync — callbackUrl is not supported`,
+      });
+      return true;
+    }
+
     if (mode === "async") {
       // Fire-and-forget; return 202 immediately.
       const runId = crypto.randomUUID();
