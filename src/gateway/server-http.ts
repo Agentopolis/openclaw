@@ -188,7 +188,7 @@ export function createHooksRequestHandler(
             name: mapped.action.name ?? "Hook",
             wakeMode: mapped.action.wakeMode,
             sessionKey: mapped.action.sessionKey ?? "",
-            deliver: resolveHookDeliver(mapped.action.deliver),
+            deliver: mapped.action.wait ? false : resolveHookDeliver(mapped.action.deliver),
             channel,
             to: mapped.action.to,
             model: mapped.action.model,

@@ -216,7 +216,8 @@ export function normalizeAgentPayload(
   if (modelRaw !== undefined && !model) {
     return { ok: false, error: "model required" };
   }
-  const deliver = resolveHookDeliver(payload.deliver);
+  const wait = payload.wait === true;
+  const deliver = wait ? false : resolveHookDeliver(payload.deliver);
   const thinkingRaw = payload.thinking;
   const thinking =
     typeof thinkingRaw === "string" && thinkingRaw.trim() ? thinkingRaw.trim() : undefined;
@@ -225,7 +226,6 @@ export function normalizeAgentPayload(
     typeof timeoutRaw === "number" && Number.isFinite(timeoutRaw) && timeoutRaw > 0
       ? Math.floor(timeoutRaw)
       : undefined;
-  const wait = payload.wait === true;
   return {
     ok: true,
     value: {
