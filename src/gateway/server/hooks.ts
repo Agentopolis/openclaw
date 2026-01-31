@@ -42,8 +42,9 @@ export function createGatewayHooksRequestHandler(params: {
     thinking?: string;
     timeoutSeconds?: number;
     allowUnsafeExternalContent?: boolean;
-    wait?: boolean;
     instructions?: string;
+    mode?: "sync" | "async";
+    callbackUrl?: string;
   };
 
   /** Prepend server-side instructions to the message if configured. */
@@ -72,7 +73,7 @@ export function createGatewayHooksRequestHandler(params: {
         model: value.model,
         thinking: value.thinking,
         timeoutSeconds: value.timeoutSeconds,
-        deliver: value.wait ? false : value.deliver,
+        deliver: value.mode === "sync" || value.callbackUrl ? false : value.deliver,
         channel: value.channel,
         to: value.to,
         allowUnsafeExternalContent: value.allowUnsafeExternalContent,
@@ -91,7 +92,7 @@ export function createGatewayHooksRequestHandler(params: {
     const { jobId, job } = buildJob(value, message);
     const runId = randomUUID();
 
-    if (value.wait) {
+    if (value.mode === "sync") {
       // Synchronous path: await the agent turn and return the result.
       return (async () => {
         try {
@@ -148,6 +149,18 @@ export function createGatewayHooksRequestHandler(params: {
         if (value.wakeMode === "now") {
           requestHeartbeatNow({ reason: `hook:${jobId}` });
         }
+        if (value.callbackUrl) {
+          await postCallback(
+            value.callbackUrl,
+            {
+              runId,
+              status: result.status,
+              reply: result.outputText ?? null,
+              error: result.error ?? null,
+            },
+            logHooks,
+          );
+        }
       } catch (err) {
         logHooks.warn(`hook agent failed: ${String(err)}`);
         enqueueSystemEvent(`Hook ${value.name} (error): ${String(err)}`, {
@@ -155,6 +168,18 @@ export function createGatewayHooksRequestHandler(params: {
         });
         if (value.wakeMode === "now") {
           requestHeartbeatNow({ reason: `hook:${jobId}:error` });
+        }
+        if (value.callbackUrl) {
+          await postCallback(
+            value.callbackUrl,
+            {
+              runId,
+              status: "error",
+              reply: null,
+              error: String(err),
+            },
+            logHooks,
+          );
         }
       }
     })();
@@ -170,4 +195,24 @@ export function createGatewayHooksRequestHandler(params: {
     dispatchAgentHook,
     dispatchWakeHook,
   });
+}
+
+async function postCallback(
+  url: string,
+  body: { runId: string; status: string; reply: string | null; error: string | null },
+  log: SubsystemLogger,
+): Promise<void> {
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!res.ok) {
+      log.warn(`hook callbackUrl POST to ${url} returned ${res.status}`);
+    }
+  } catch (err) {
+    log.warn(`hook callbackUrl POST to ${url} failed: ${String(err)}`);
+  }
 }

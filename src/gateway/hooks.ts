@@ -155,7 +155,8 @@ export type HookAgentPayload = {
   model?: string;
   thinking?: string;
   timeoutSeconds?: number;
-  wait?: boolean;
+  mode?: "sync" | "async";
+  callbackUrl?: string;
 };
 
 const listHookChannelValues = () => ["last", ...listChannelPlugins().map((plugin) => plugin.id)];
@@ -216,8 +217,16 @@ export function normalizeAgentPayload(
   if (modelRaw !== undefined && !model) {
     return { ok: false, error: "model required" };
   }
-  const wait = payload.wait === true;
-  const deliver = wait ? false : resolveHookDeliver(payload.deliver);
+  const modeRaw = payload.mode;
+  const mode: "sync" | "async" | undefined =
+    modeRaw === "sync" ? "sync" : modeRaw === "async" ? "async" : undefined;
+  const callbackUrlRaw = payload.callbackUrl;
+  const callbackUrl =
+    typeof callbackUrlRaw === "string" && callbackUrlRaw.trim() ? callbackUrlRaw.trim() : undefined;
+  if (mode === "async" && !callbackUrl) {
+    return { ok: false, error: "callbackUrl required when mode is async" };
+  }
+  const deliver = mode === "sync" || callbackUrl ? false : resolveHookDeliver(payload.deliver);
   const thinkingRaw = payload.thinking;
   const thinking =
     typeof thinkingRaw === "string" && thinkingRaw.trim() ? thinkingRaw.trim() : undefined;
@@ -239,7 +248,8 @@ export function normalizeAgentPayload(
       model,
       thinking,
       timeoutSeconds,
-      wait,
+      mode,
+      callbackUrl,
     },
   };
 }

@@ -35,10 +35,12 @@ export type HookMappingConfig = {
   model?: string;
   thinking?: string;
   timeoutSeconds?: number;
-  /** Wait for the agent to finish and return the reply in the HTTP response. */
-  wait?: boolean;
   /** Server-side instructions prepended to the message before the agent processes it. */
   instructions?: string;
+  /** How this hook responds to the calling agent: "sync" returns the reply inline; "async" POSTs it to callbackUrl. */
+  mode?: "sync" | "async";
+  /** URL the calling agent receives the result at when mode is "async". */
+  callbackUrl?: string;
   transform?: HookMappingTransform;
 };
 

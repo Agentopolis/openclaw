@@ -47,8 +47,9 @@ type HookDispatchers = {
     thinking?: string;
     timeoutSeconds?: number;
     allowUnsafeExternalContent?: boolean;
-    wait?: boolean;
     instructions?: string;
+    mode?: "sync" | "async";
+    callbackUrl?: string;
   }) => string | Promise<{ runId: string; reply?: string; status: string }>;
 };
 
@@ -188,15 +189,19 @@ export function createHooksRequestHandler(
             name: mapped.action.name ?? "Hook",
             wakeMode: mapped.action.wakeMode,
             sessionKey: mapped.action.sessionKey ?? "",
-            deliver: mapped.action.wait ? false : resolveHookDeliver(mapped.action.deliver),
+            deliver:
+              mapped.action.mode === "sync" || mapped.action.callbackUrl
+                ? false
+                : resolveHookDeliver(mapped.action.deliver),
             channel,
             to: mapped.action.to,
             model: mapped.action.model,
             thinking: mapped.action.thinking,
             timeoutSeconds: mapped.action.timeoutSeconds,
             allowUnsafeExternalContent: mapped.action.allowUnsafeExternalContent,
-            wait: mapped.action.wait,
             instructions: mapped.action.instructions,
+            mode: mapped.action.mode,
+            callbackUrl: mapped.action.callbackUrl,
           });
           if (typeof mappedResult === "string") {
             sendJson(res, 202, { ok: true, runId: mappedResult });

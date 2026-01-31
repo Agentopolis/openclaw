@@ -362,8 +362,9 @@ const FIELD_LABELS: Record<string, string> = {
   "plugins.installs.*.installPath": "Plugin Install Path",
   "plugins.installs.*.version": "Plugin Install Version",
   "plugins.installs.*.installedAt": "Plugin Install Time",
-  "hooks.mappings.*.wait": "Wait for Response",
   "hooks.mappings.*.instructions": "Agent Instructions",
+  "hooks.mappings.*.mode": "Response Mode",
+  "hooks.mappings.*.callbackUrl": "Callback URL",
 };
 
 const FIELD_HELP: Record<string, string> = {
@@ -678,10 +679,12 @@ const FIELD_HELP: Record<string, string> = {
     "Enable the Guild Members privileged intent. Must also be enabled in the Discord Developer Portal. Default: false.",
   "channels.slack.dm.policy":
     'Direct message access control ("pairing" recommended). "open" requires channels.slack.dm.allowFrom=["*"].',
-  "hooks.mappings.*.wait":
-    "Wait for the agent to finish and return the reply in the HTTP response (synchronous mode). When false (default), the hook fires async and returns a runId immediately.",
   "hooks.mappings.*.instructions":
     "Server-side instructions prepended to the message before the agent processes it. Defined by the agent owner; the caller cannot see or override these.",
+  "hooks.mappings.*.mode":
+    'How this hook responds to the calling agent. "sync": hold the connection and return the reply in the HTTP response. "async": respond immediately with a runId, then POST the result to callbackUrl when done. Default: fire-and-forget (immediate 202, no callback).',
+  "hooks.mappings.*.callbackUrl":
+    "URL to POST the agent result to when an async hook finishes. Required when mode is async. The calling agent receives { runId, status, reply, error } at this URL.",
 };
 
 const FIELD_PLACEHOLDERS: Record<string, string> = {

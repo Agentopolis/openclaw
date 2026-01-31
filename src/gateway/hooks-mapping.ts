@@ -21,8 +21,9 @@ export type HookMappingResolved = {
   model?: string;
   thinking?: string;
   timeoutSeconds?: number;
-  wait?: boolean;
+  mode?: "sync" | "async";
   instructions?: string;
+  callbackUrl?: string;
   transform?: HookMappingTransformResolved;
 };
 
@@ -57,8 +58,9 @@ export type HookAction =
       model?: string;
       thinking?: string;
       timeoutSeconds?: number;
-      wait?: boolean;
+      mode?: "sync" | "async";
       instructions?: string;
+      callbackUrl?: string;
     };
 
 export type HookMappingResult =
@@ -86,7 +88,6 @@ const transformCache = new Map<string, HookTransformFn>();
 type HookTransformResult = Partial<{
   kind: HookAction["kind"];
   text: string;
-  mode: "now" | "next-heartbeat";
   message: string;
   wakeMode: "now" | "next-heartbeat";
   name: string;
@@ -98,8 +99,9 @@ type HookTransformResult = Partial<{
   model: string;
   thinking: string;
   timeoutSeconds: number;
-  wait: boolean;
+  mode: "sync" | "async";
   instructions: string;
+  callbackUrl: string;
 }> | null;
 
 type HookTransformFn = (
@@ -213,8 +215,9 @@ function normalizeHookMapping(
     model: mapping.model,
     thinking: mapping.thinking,
     timeoutSeconds: mapping.timeoutSeconds,
-    wait: mapping.wait,
+    mode: mapping.mode,
     instructions: mapping.instructions,
+    callbackUrl: mapping.callbackUrl,
     transform,
   };
 }
@@ -265,8 +268,9 @@ function buildActionFromMapping(
       model: renderOptional(mapping.model, ctx),
       thinking: renderOptional(mapping.thinking, ctx),
       timeoutSeconds: mapping.timeoutSeconds,
-      wait: mapping.wait,
+      mode: mapping.mode,
       instructions: mapping.instructions,
+      callbackUrl: mapping.callbackUrl,
     },
   };
 }
@@ -283,7 +287,8 @@ function mergeAction(
   if (kind === "wake") {
     const baseWake = base.kind === "wake" ? base : undefined;
     const text = typeof override.text === "string" ? override.text : (baseWake?.text ?? "");
-    const mode = override.mode === "next-heartbeat" ? "next-heartbeat" : (baseWake?.mode ?? "now");
+    const mode =
+      override.wakeMode === "next-heartbeat" ? "next-heartbeat" : (baseWake?.mode ?? "now");
     return validateAction({ kind: "wake", text, mode });
   }
   const baseAgent = base.kind === "agent" ? base : undefined;
@@ -307,8 +312,9 @@ function mergeAction(
     model: override.model ?? baseAgent?.model,
     thinking: override.thinking ?? baseAgent?.thinking,
     timeoutSeconds: override.timeoutSeconds ?? baseAgent?.timeoutSeconds,
-    wait: typeof override.wait === "boolean" ? override.wait : baseAgent?.wait,
+    mode: override.mode ?? baseAgent?.mode,
     instructions: override.instructions ?? baseAgent?.instructions,
+    callbackUrl: override.callbackUrl ?? baseAgent?.callbackUrl,
   });
 }
 
