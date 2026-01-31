@@ -21,6 +21,8 @@ export type HookMappingResolved = {
   model?: string;
   thinking?: string;
   timeoutSeconds?: number;
+  wait?: boolean;
+  instructions?: string;
   transform?: HookMappingTransformResolved;
 };
 
@@ -55,6 +57,8 @@ export type HookAction =
       model?: string;
       thinking?: string;
       timeoutSeconds?: number;
+      wait?: boolean;
+      instructions?: string;
     };
 
 export type HookMappingResult =
@@ -94,6 +98,8 @@ type HookTransformResult = Partial<{
   model: string;
   thinking: string;
   timeoutSeconds: number;
+  wait: boolean;
+  instructions: string;
 }> | null;
 
 type HookTransformFn = (
@@ -207,6 +213,8 @@ function normalizeHookMapping(
     model: mapping.model,
     thinking: mapping.thinking,
     timeoutSeconds: mapping.timeoutSeconds,
+    wait: mapping.wait,
+    instructions: mapping.instructions,
     transform,
   };
 }
@@ -257,6 +265,8 @@ function buildActionFromMapping(
       model: renderOptional(mapping.model, ctx),
       thinking: renderOptional(mapping.thinking, ctx),
       timeoutSeconds: mapping.timeoutSeconds,
+      wait: mapping.wait,
+      instructions: mapping.instructions,
     },
   };
 }
@@ -297,6 +307,8 @@ function mergeAction(
     model: override.model ?? baseAgent?.model,
     thinking: override.thinking ?? baseAgent?.thinking,
     timeoutSeconds: override.timeoutSeconds ?? baseAgent?.timeoutSeconds,
+    wait: typeof override.wait === "boolean" ? override.wait : baseAgent?.wait,
+    instructions: override.instructions ?? baseAgent?.instructions,
   });
 }
 

@@ -30,7 +30,7 @@ export function createGatewayHooksRequestHandler(params: {
     }
   };
 
-  const dispatchAgentHook = (value: {
+  type AgentHookValue = {
     message: string;
     name: string;
     wakeMode: "now" | "next-heartbeat";
@@ -42,9 +42,19 @@ export function createGatewayHooksRequestHandler(params: {
     thinking?: string;
     timeoutSeconds?: number;
     allowUnsafeExternalContent?: boolean;
-  }) => {
-    const sessionKey = value.sessionKey.trim() ? value.sessionKey.trim() : `hook:${randomUUID()}`;
-    const mainSessionKey = resolveMainSessionKeyFromConfig();
+    wait?: boolean;
+    instructions?: string;
+  };
+
+  /** Prepend server-side instructions to the message if configured. */
+  function applyInstructions(message: string, instructions?: string): string {
+    if (!instructions?.trim()) {
+      return message;
+    }
+    return `<instructions>\n${instructions.trim()}\n</instructions>\n\n${message}`;
+  }
+
+  function buildJob(value: AgentHookValue, message: string) {
     const jobId = randomUUID();
     const now = Date.now();
     const job: CronJob = {
@@ -58,7 +68,7 @@ export function createGatewayHooksRequestHandler(params: {
       wakeMode: value.wakeMode,
       payload: {
         kind: "agentTurn",
-        message: value.message,
+        message,
         model: value.model,
         thinking: value.thinking,
         timeoutSeconds: value.timeoutSeconds,
@@ -69,8 +79,55 @@ export function createGatewayHooksRequestHandler(params: {
       },
       state: { nextRunAtMs: now },
     };
+    return { jobId, job };
+  }
 
+  const dispatchAgentHook = (
+    value: AgentHookValue,
+  ): string | Promise<{ runId: string; reply?: string; status: string }> => {
+    const sessionKey = value.sessionKey.trim() ? value.sessionKey.trim() : `hook:${randomUUID()}`;
+    const mainSessionKey = resolveMainSessionKeyFromConfig();
+    const message = applyInstructions(value.message, value.instructions);
+    const { jobId, job } = buildJob(value, message);
     const runId = randomUUID();
+
+    if (value.wait) {
+      // Synchronous path: await the agent turn and return the result.
+      return (async () => {
+        try {
+          const cfg = loadConfig();
+          const result = await runCronIsolatedAgentTurn({
+            cfg,
+            deps,
+            job,
+            message,
+            sessionKey,
+            lane: "cron",
+          });
+          const summary = result.summary?.trim() || result.error?.trim() || result.status;
+          const prefix =
+            result.status === "ok" ? `Hook ${value.name}` : `Hook ${value.name} (${result.status})`;
+          enqueueSystemEvent(`${prefix}: ${summary}`.trim(), {
+            sessionKey: mainSessionKey,
+          });
+          if (value.wakeMode === "now") {
+            requestHeartbeatNow({ reason: `hook:${jobId}` });
+          }
+          return { runId, reply: result.outputText, status: result.status };
+        } catch (err) {
+          logHooks.warn(`hook agent failed: ${String(err)}`);
+          enqueueSystemEvent(`Hook ${value.name} (error): ${String(err)}`, {
+            sessionKey: mainSessionKey,
+          });
+          if (value.wakeMode === "now") {
+            requestHeartbeatNow({ reason: `hook:${jobId}:error` });
+          }
+          return { runId, status: "error" };
+        }
+      })();
+    }
+
+    // Async fire-and-forget path (existing behavior).
     void (async () => {
       try {
         const cfg = loadConfig();
@@ -78,7 +135,7 @@ export function createGatewayHooksRequestHandler(params: {
           cfg,
           deps,
           job,
-          message: value.message,
+          message,
           sessionKey,
           lane: "cron",
         });

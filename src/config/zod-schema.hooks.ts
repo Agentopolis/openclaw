@@ -33,6 +33,8 @@ export const HookMappingSchema = z
     model: z.string().optional(),
     thinking: z.string().optional(),
     timeoutSeconds: z.number().int().positive().optional(),
+    wait: z.boolean().optional(),
+    instructions: z.string().optional(),
     transform: z
       .object({
         module: z.string(),

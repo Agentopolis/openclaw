@@ -35,6 +35,10 @@ export type HookMappingConfig = {
   model?: string;
   thinking?: string;
   timeoutSeconds?: number;
+  /** Wait for the agent to finish and return the reply in the HTTP response. */
+  wait?: boolean;
+  /** Server-side instructions prepended to the message before the agent processes it. */
+  instructions?: string;
   transform?: HookMappingTransform;
 };
 

@@ -155,6 +155,7 @@ export type HookAgentPayload = {
   model?: string;
   thinking?: string;
   timeoutSeconds?: number;
+  wait?: boolean;
 };
 
 const listHookChannelValues = () => ["last", ...listChannelPlugins().map((plugin) => plugin.id)];
@@ -224,6 +225,7 @@ export function normalizeAgentPayload(
     typeof timeoutRaw === "number" && Number.isFinite(timeoutRaw) && timeoutRaw > 0
       ? Math.floor(timeoutRaw)
       : undefined;
+  const wait = payload.wait === true;
   return {
     ok: true,
     value: {
@@ -237,6 +239,7 @@ export function normalizeAgentPayload(
       model,
       thinking,
       timeoutSeconds,
+      wait,
     },
   };
 }

@@ -362,6 +362,8 @@ const FIELD_LABELS: Record<string, string> = {
   "plugins.installs.*.installPath": "Plugin Install Path",
   "plugins.installs.*.version": "Plugin Install Version",
   "plugins.installs.*.installedAt": "Plugin Install Time",
+  "hooks.mappings.*.wait": "Wait for Response",
+  "hooks.mappings.*.instructions": "Agent Instructions",
 };
 
 const FIELD_HELP: Record<string, string> = {
@@ -676,6 +678,10 @@ const FIELD_HELP: Record<string, string> = {
     "Enable the Guild Members privileged intent. Must also be enabled in the Discord Developer Portal. Default: false.",
   "channels.slack.dm.policy":
     'Direct message access control ("pairing" recommended). "open" requires channels.slack.dm.allowFrom=["*"].',
+  "hooks.mappings.*.wait":
+    "Wait for the agent to finish and return the reply in the HTTP response (synchronous mode). When false (default), the hook fires async and returns a runId immediately.",
+  "hooks.mappings.*.instructions":
+    "Server-side instructions prepended to the message before the agent processes it. Defined by the agent owner; the caller cannot see or override these.",
 };
 
 const FIELD_PLACEHOLDERS: Record<string, string> = {

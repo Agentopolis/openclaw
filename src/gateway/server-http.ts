@@ -47,7 +47,9 @@ type HookDispatchers = {
     thinking?: string;
     timeoutSeconds?: number;
     allowUnsafeExternalContent?: boolean;
-  }) => string;
+    wait?: boolean;
+    instructions?: string;
+  }) => string | Promise<{ runId: string; reply?: string; status: string }>;
 };
 
 function sendJson(res: ServerResponse, status: number, body: unknown) {
@@ -136,8 +138,17 @@ export function createHooksRequestHandler(
         sendJson(res, 400, { ok: false, error: normalized.error });
         return true;
       }
-      const runId = dispatchAgentHook(normalized.value);
-      sendJson(res, 202, { ok: true, runId });
+      const result = dispatchAgentHook(normalized.value);
+      if (typeof result === "string") {
+        sendJson(res, 202, { ok: true, runId: result });
+      } else {
+        const syncResult = await result;
+        if (syncResult.status === "error") {
+          sendJson(res, 500, { ok: false, error: "agent error", runId: syncResult.runId });
+        } else {
+          sendJson(res, 200, { ok: true, reply: syncResult.reply, runId: syncResult.runId });
+        }
+      }
       return true;
     }
 
@@ -172,7 +183,7 @@ export function createHooksRequestHandler(
             sendJson(res, 400, { ok: false, error: getHookChannelError() });
             return true;
           }
-          const runId = dispatchAgentHook({
+          const mappedResult = dispatchAgentHook({
             message: mapped.action.message,
             name: mapped.action.name ?? "Hook",
             wakeMode: mapped.action.wakeMode,
@@ -184,8 +195,27 @@ export function createHooksRequestHandler(
             thinking: mapped.action.thinking,
             timeoutSeconds: mapped.action.timeoutSeconds,
             allowUnsafeExternalContent: mapped.action.allowUnsafeExternalContent,
+            wait: mapped.action.wait,
+            instructions: mapped.action.instructions,
           });
-          sendJson(res, 202, { ok: true, runId });
+          if (typeof mappedResult === "string") {
+            sendJson(res, 202, { ok: true, runId: mappedResult });
+          } else {
+            const syncResult = await mappedResult;
+            if (syncResult.status === "error") {
+              sendJson(res, 500, {
+                ok: false,
+                error: "agent error",
+                runId: syncResult.runId,
+              });
+            } else {
+              sendJson(res, 200, {
+                ok: true,
+                reply: syncResult.reply,
+                runId: syncResult.runId,
+              });
+            }
+          }
           return true;
         }
       } catch (err) {
