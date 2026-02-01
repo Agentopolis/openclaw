@@ -79,13 +79,16 @@ export function humanize(raw: string) {
     .replace(/^./, (m) => m.toUpperCase());
 }
 
+/** Check only the leaf (last string segment) of the path. */
 export function isSensitivePath(path: Array<string | number>): boolean {
-  const key = pathKey(path).toLowerCase();
+  const leaf = [...path].reverse().find((s): s is string => typeof s === "string");
+  if (!leaf) return false;
+  const lc = leaf.toLowerCase();
   return (
-    key.includes("token") ||
-    key.includes("password") ||
-    key.includes("secret") ||
-    key.includes("apikey") ||
-    key.endsWith("key")
+    lc.includes("token") ||
+    lc.includes("password") ||
+    lc.includes("secret") ||
+    lc.includes("apikey") ||
+    lc.endsWith("key")
   );
 }

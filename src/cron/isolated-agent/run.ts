@@ -99,6 +99,8 @@ export async function runCronIsolatedAgentTurn(params: {
   lane?: string;
   /** Extra system prompt injected into the embedded agent run. */
   instructions?: string;
+  /** When true, reuse existing session transcript instead of starting fresh. */
+  continueSession?: boolean;
 }): Promise<RunCronAgentTurnResult> {
   const defaultAgentId = resolveDefaultAgentId(params.cfg);
   const requestedAgentId =
@@ -202,6 +204,7 @@ export async function runCronIsolatedAgentTurn(params: {
     sessionKey: agentSessionKey,
     agentId,
     nowMs: now,
+    continueSession: params.continueSession,
   });
 
   // Resolve thinking level - job thinking > hooks.gmail.thinking > agent default

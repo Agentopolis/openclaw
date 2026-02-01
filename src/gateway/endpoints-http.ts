@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { createSubsystemLogger } from "../logging/subsystem.js";
 import type { EndpointsConfigResolved } from "./endpoints.js";
@@ -51,6 +52,10 @@ export type EndpointDispatcher = (value: {
   callbackUrl?: string;
   /** Name of the token used for auth (undefined if unauthenticated). */
   tokenName?: string;
+  /** First 8 chars of sha256(tokenValue), or "anon" if unauthenticated. */
+  tokenHash: string;
+  /** Caller-supplied or server-generated session id for multi-turn continuity. */
+  sessionId: string;
 }) => Promise<{ runId: string; reply?: string }>;
 
 export type EndpointsRequestHandler = (
@@ -100,6 +105,7 @@ export function createEndpointsRequestHandler(opts: {
 
     // Auth: if tokens are configured, require a matching one.
     let tokenName: string | undefined;
+    let tokenHash = "anon";
     if (entry.tokenMap.size > 0) {
       const { token } = extractHookToken(req, url);
       if (!token) {
@@ -112,6 +118,7 @@ export function createEndpointsRequestHandler(opts: {
         return true;
       }
       tokenName = name;
+      tokenHash = createHash("sha256").update(token).digest("hex").slice(0, 8);
     }
 
     // Rate limiting.
@@ -139,6 +146,10 @@ export function createEndpointsRequestHandler(opts: {
       return true;
     }
 
+    const sessionId =
+      typeof raw.sessionId === "string" && raw.sessionId.trim()
+        ? raw.sessionId.trim()
+        : crypto.randomUUID();
     const callbackUrl = typeof raw.callbackUrl === "string" ? raw.callbackUrl.trim() : undefined;
     const mode = entry.mode ?? "sync";
 
@@ -160,7 +171,7 @@ export function createEndpointsRequestHandler(opts: {
 
     if (mode === "async") {
       const runId = crypto.randomUUID();
-      sendJson(res, 202, { ok: true, runId });
+      sendJson(res, 202, { ok: true, runId, sessionId });
 
       void (async () => {
         try {
@@ -173,12 +184,15 @@ export function createEndpointsRequestHandler(opts: {
             timeoutSeconds: entry.timeoutSeconds,
             callbackUrl,
             tokenName,
+            tokenHash,
+            sessionId,
           });
           if (callbackUrl) {
             await postCallback(callbackUrl, {
               runId,
               status: "ok",
               reply: result.reply ?? "",
+              sessionId,
             });
           }
         } catch (err) {
@@ -188,6 +202,7 @@ export function createEndpointsRequestHandler(opts: {
               runId,
               status: "error",
               error: String(err),
+              sessionId,
             }).catch(() => {});
           }
         }
@@ -206,8 +221,10 @@ export function createEndpointsRequestHandler(opts: {
         thinking: entry.thinking,
         timeoutSeconds: entry.timeoutSeconds,
         tokenName,
+        tokenHash,
+        sessionId,
       });
-      sendJson(res, 200, { ok: true, reply: result.reply ?? "" });
+      sendJson(res, 200, { ok: true, reply: result.reply ?? "", sessionId });
     } catch (err) {
       log.warn(`endpoint ${entry.id} sync error: ${String(err)}`);
       sendJson(res, 500, { ok: false, error: String(err) });
@@ -218,7 +235,7 @@ export function createEndpointsRequestHandler(opts: {
 
 async function postCallback(
   url: string,
-  body: { runId: string; status: string; reply?: string; error?: string },
+  body: { runId: string; status: string; reply?: string; error?: string; sessionId?: string },
 ): Promise<void> {
   await fetch(url, {
     method: "POST",

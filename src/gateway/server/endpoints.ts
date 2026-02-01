@@ -29,7 +29,7 @@ export function createGatewayEndpointsRequestHandler(params: {
     log,
     dispatch: async (value) => {
       const cfg = loadConfig();
-      const sessionKey = `endpoint:${value.endpointId}:${randomUUID()}`;
+      const sessionKey = `endpoint:${value.endpointId}:${value.tokenHash}:${value.sessionId}`;
       const mainSessionKey = resolveMainSessionKeyFromConfig();
       const jobId = randomUUID();
       const now = Date.now();
@@ -61,6 +61,7 @@ export function createGatewayEndpointsRequestHandler(params: {
         sessionKey,
         lane: "endpoint",
         instructions: value.instructions,
+        continueSession: true,
       });
 
       const summary = result.summary?.trim() || result.error?.trim() || result.status;

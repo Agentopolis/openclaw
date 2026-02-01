@@ -332,6 +332,26 @@ function renderTextInput(params: {
           }}
         />
         ${
+          isSensitive
+            ? html`
+          <button
+            type="button"
+            class="cfg-input__reset"
+            title="Reveal"
+            @click=${(e: Event) => {
+              const btn = e.currentTarget as HTMLButtonElement;
+              const input = btn.parentElement?.querySelector("input");
+              if (!input) return;
+              const show = input.type === "password";
+              input.type = show ? "text" : "password";
+              btn.textContent = show ? "\u25CF" : "\u25CB";
+              btn.title = show ? "Hide" : "Reveal";
+            }}
+          >\u25CB</button>
+        `
+            : nothing
+        }
+        ${
           schema.default !== undefined
             ? html`
           <button

@@ -8,6 +8,8 @@ export function resolveCronSession(params: {
   sessionKey: string;
   nowMs: number;
   agentId: string;
+  /** When true, reuse an existing sessionId from the store entry if present. */
+  continueSession?: boolean;
 }) {
   const sessionCfg = params.cfg.session;
   const storePath = resolveStorePath(sessionCfg?.store, {
@@ -15,8 +17,9 @@ export function resolveCronSession(params: {
   });
   const store = loadSessionStore(storePath);
   const entry = store[params.sessionKey];
-  const sessionId = crypto.randomUUID();
-  const systemSent = false;
+  const canContinue = params.continueSession && entry?.sessionId;
+  const sessionId = canContinue ? entry.sessionId : crypto.randomUUID();
+  const systemSent = canContinue ? (entry.systemSent ?? false) : false;
   const sessionEntry: SessionEntry = {
     sessionId,
     updatedAt: params.nowMs,
@@ -31,5 +34,5 @@ export function resolveCronSession(params: {
     lastAccountId: entry?.lastAccountId,
     skillsSnapshot: entry?.skillsSnapshot,
   };
-  return { storePath, store, sessionEntry, systemSent, isNewSession: true };
+  return { storePath, store, sessionEntry, systemSent, isNewSession: !canContinue };
 }

@@ -703,8 +703,10 @@ const FIELD_PLACEHOLDERS: Record<string, string> = {
 
 const SENSITIVE_PATTERNS = [/token/i, /password/i, /secret/i, /api.?key/i];
 
+/** Check only the leaf (last segment) of a dot-separated path. */
 function isSensitivePath(path: string): boolean {
-  return SENSITIVE_PATTERNS.some((pattern) => pattern.test(path));
+  const leaf = path.split(".").at(-1) ?? path;
+  return SENSITIVE_PATTERNS.some((pattern) => pattern.test(leaf));
 }
 
 type JsonSchemaObject = JsonSchemaNode & {
@@ -780,6 +782,11 @@ function buildBaseHints(): ConfigUiHints {
     const current = hints[path];
     hints[path] = current ? { ...current, placeholder } : { placeholder };
   }
+
+  // Endpoint token value is sensitive; name is not (leaf "name" doesn't match
+  // sensitive patterns, and leaf "value" doesn't either — so mark it explicitly).
+  hints["endpoints.entries.tokens.value"] = { sensitive: true, label: "Value" };
+
   return hints;
 }
 
