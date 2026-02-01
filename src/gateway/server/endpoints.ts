@@ -64,10 +64,11 @@ export function createGatewayEndpointsRequestHandler(params: {
       });
 
       const summary = result.summary?.trim() || result.error?.trim() || result.status;
+      const caller = value.tokenName ? ` (caller: ${value.tokenName})` : "";
       const prefix =
         result.status === "ok"
-          ? `Endpoint ${value.endpointId}`
-          : `Endpoint ${value.endpointId} (${result.status})`;
+          ? `Endpoint ${value.endpointId}${caller}`
+          : `Endpoint ${value.endpointId}${caller} (${result.status})`;
       enqueueSystemEvent(`${prefix}: ${summary}`.trim(), {
         sessionKey: mainSessionKey,
       });

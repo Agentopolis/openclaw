@@ -347,8 +347,9 @@ const FIELD_LABELS: Record<string, string> = {
   "channels.signal.account": "Signal Account",
   "channels.imessage.cliPath": "iMessage CLI Path",
   "endpoints.enabled": "Endpoints Enabled",
-  "endpoints.token": "Endpoints Auth Token",
   "endpoints.basePath": "Endpoints Base Path",
+  "endpoints.rateLimit.maxRequests": "Endpoints Rate Limit Max Requests",
+  "endpoints.rateLimit.windowSeconds": "Endpoints Rate Limit Window (seconds)",
   "endpoints.entries": "Endpoint Entries",
   "agents.list[].identity.avatar": "Agent Avatar",
   "discovery.mdns.mode": "mDNS Discovery Mode",
@@ -485,11 +486,12 @@ const FIELD_HELP: Record<string, string> = {
   "channels.mattermost.requireMention":
     "Require @mention in channels before responding (default: true).",
   "endpoints.enabled": "Enable named HTTP endpoints for agent request/response.",
-  "endpoints.token":
-    "Bearer token for endpoint auth. If omitted, endpoints accept unauthenticated requests.",
   "endpoints.basePath": 'URL prefix for endpoints (default: "/endpoints").',
+  "endpoints.rateLimit.maxRequests": "Max requests per endpoint per window (default: 60).",
+  "endpoints.rateLimit.windowSeconds":
+    "Sliding window size in seconds for rate limiting (default: 60).",
   "endpoints.entries":
-    "List of endpoint entries. Each defines an id (path), instructions, mode (sync/async), and optional model/thinking overrides.",
+    "List of endpoint entries. Each defines an id (path), instructions, mode (sync/async), named auth tokens, and model/thinking overrides.",
   "auth.profiles": "Named auth profiles (provider + mode + optional email).",
   "auth.order": "Ordered auth profile IDs per provider (used for automatic failover).",
   "auth.cooldowns.billingBackoffHours":

@@ -11,6 +11,36 @@ function sendJson(res: ServerResponse, status: number, body: unknown) {
   res.end(JSON.stringify(body));
 }
 
+// ---------------------------------------------------------------------------
+// Sliding-window rate limiter (per endpoint id)
+// ---------------------------------------------------------------------------
+
+type RateLimitBucket = { timestamps: number[] };
+
+const rateBuckets = new Map<string, RateLimitBucket>();
+
+function isRateLimited(
+  endpointId: string,
+  maxRequests: number,
+  windowMs: number,
+  now: number,
+): boolean {
+  let bucket = rateBuckets.get(endpointId);
+  if (!bucket) {
+    bucket = { timestamps: [] };
+    rateBuckets.set(endpointId, bucket);
+  }
+  const cutoff = now - windowMs;
+  bucket.timestamps = bucket.timestamps.filter((t) => t > cutoff);
+  if (bucket.timestamps.length >= maxRequests) {
+    return true;
+  }
+  bucket.timestamps.push(now);
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+
 export type EndpointDispatcher = (value: {
   endpointId: string;
   message: string;
@@ -19,6 +49,8 @@ export type EndpointDispatcher = (value: {
   thinking?: string;
   timeoutSeconds?: number;
   callbackUrl?: string;
+  /** Name of the token used for auth (undefined if unauthenticated). */
+  tokenName?: string;
 }) => Promise<{ runId: string; reply?: string }>;
 
 export type EndpointsRequestHandler = (
@@ -46,15 +78,6 @@ export function createEndpointsRequestHandler(opts: {
       return false;
     }
 
-    // Auth check: if token is configured, require it.
-    if (config.token) {
-      const { token } = extractHookToken(req, url);
-      if (!token || token !== config.token) {
-        sendJson(res, 401, { ok: false, error: "Unauthorized" });
-        return true;
-      }
-    }
-
     if (req.method !== "POST") {
       res.statusCode = 405;
       res.setHeader("Allow", "POST");
@@ -73,6 +96,32 @@ export function createEndpointsRequestHandler(opts: {
     if (!entry) {
       sendJson(res, 404, { ok: false, error: `Unknown endpoint: ${subPath}` });
       return true;
+    }
+
+    // Auth: if tokens are configured, require a matching one.
+    let tokenName: string | undefined;
+    if (entry.tokenMap.size > 0) {
+      const { token } = extractHookToken(req, url);
+      if (!token) {
+        sendJson(res, 401, { ok: false, error: "Unauthorized" });
+        return true;
+      }
+      const name = entry.tokenMap.get(token);
+      if (!name) {
+        sendJson(res, 401, { ok: false, error: "Unauthorized" });
+        return true;
+      }
+      tokenName = name;
+    }
+
+    // Rate limiting.
+    if (config.rateLimit) {
+      const windowMs = config.rateLimit.windowSeconds * 1000;
+      if (isRateLimited(entry.id, config.rateLimit.maxRequests, windowMs, Date.now())) {
+        res.setHeader("Retry-After", String(config.rateLimit.windowSeconds));
+        sendJson(res, 429, { ok: false, error: "Rate limit exceeded" });
+        return true;
+      }
     }
 
     const body = await readJsonBody(req, 1024 * 1024);
@@ -110,7 +159,6 @@ export function createEndpointsRequestHandler(opts: {
     }
 
     if (mode === "async") {
-      // Fire-and-forget; return 202 immediately.
       const runId = crypto.randomUUID();
       sendJson(res, 202, { ok: true, runId });
 
@@ -124,6 +172,7 @@ export function createEndpointsRequestHandler(opts: {
             thinking: entry.thinking,
             timeoutSeconds: entry.timeoutSeconds,
             callbackUrl,
+            tokenName,
           });
           if (callbackUrl) {
             await postCallback(callbackUrl, {
@@ -156,6 +205,7 @@ export function createEndpointsRequestHandler(opts: {
         model: entry.model,
         thinking: entry.thinking,
         timeoutSeconds: entry.timeoutSeconds,
+        tokenName,
       });
       sendJson(res, 200, { ok: true, reply: result.reply ?? "" });
     } catch (err) {
